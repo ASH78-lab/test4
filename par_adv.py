@@ -288,7 +288,7 @@ def pin_all():
     df5 = df5[1:]
     df5.rename(columns=new_header, inplace=True)
     df7=pd.concat([df5,df_reordered2])
-    df7.to_excel('/Users/JOHN/Desktop/temppin2.xlsx', sheet_name='Budgets', index=False)
+
     wks2.update([df7.columns.values.tolist()]+df7.values.tolist())
 
 
