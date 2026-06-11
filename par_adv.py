@@ -148,31 +148,33 @@ def pin_all():
 
 
     def smooth_scroll_to_bottom(driver, container, step=100, max_retries=3):
-        global df
+        # Инициализируем пустой DataFrame внутри функции
+        result_df = pd.DataFrame()
         last_height = driver.execute_script("return arguments[0].scrollHeight", container)
         last_scroll_top = 0
         retry_count = 0
 
-
         while True:
             # Прокрутка на шаг вниз
             driver.execute_script(f"arguments[0].scrollTop += {step};", container)
-            time.sleep(3)  # Увеличенная пауза для загрузки
-            df3=pars_pin()
-            df=pd.concat([df,df3])
+            time.sleep(3)  # Пауза для загрузки
 
+            try:
+                # Парсим данные и добавляем к результату
+                df3 = pars_pin()
+                if not df3.empty:  # Проверяем, что данные не пустые
+                    result_df = pd.concat([result_df, df3], ignore_index=True)
+            except Exception as e:
+                print(f"Ошибка при парсинге: {e}")
 
             # Получаем текущую позицию прокрутки
             current_scroll_top = driver.execute_script("return arguments[0].scrollTop", container)
 
-            # Проверяем, изменилась ли высота блока (если контент подгружается)
+            # Проверяем изменение высоты блока
             new_height = driver.execute_script("return arguments[0].scrollHeight", container)
 
-            # Условия выхода:
-            # 1. Высота не изменилась и мы уже на дне
-            # 2. Позиция прокрутки не меняется (достигнут конец)
-            if (new_height == last_height and current_scroll_top == last_scroll_top):
-                # Дополнительная проверка: действительно ли мы внизу?
+            # Условия выхода
+            if new_height == last_height and current_scroll_top == last_scroll_top:
                 is_at_bottom = driver.execute_script(
                     "return arguments[0].scrollTop + arguments[0].clientHeight >= arguments[0].scrollHeight - 10",
                     container
@@ -184,18 +186,23 @@ def pin_all():
                     if retry_count >= max_retries:
                         break
             else:
-                retry_count = 0  # Сбрасываем счётчик попыток при успешном обновлении
+                retry_count = 0  # Сбрасываем счётчик при успешном обновлении
 
             last_height = new_height
             last_scroll_top = current_scroll_top
 
+        return result_df  # Возвращаем итоговый DataFrame
 
-    df = pd.DataFrame()
-    df3=pars_pin()
-    df=pd.concat([df,df3])
+    # Использование функции
+    df = pd.DataFrame()  # Инициализация основного DataFrame
+    df3 = pars_pin()
     scroll_container = driver.find_element(By.CLASS_NAME, "list-mCW1NFV2s6")
-    smooth_scroll_to_bottom(driver, scroll_container, step=500)
-    df_clean = df.drop_duplicates()
+    df = smooth_scroll_to_bottom(driver, scroll_container, step=500)
+
+    
+    df9=pd.concat([df3,df])
+
+    df_clean = df9.drop_duplicates()
 
 
 
@@ -213,7 +220,7 @@ def pin_all():
             date_part = ','.join(date_str.split(',')[1:]).strip()
             parsed_date = datetime.strptime(date_part, '%b %d, %Y')
         # Обработка 'Today'
-        elif 'Today' in date_str :
+        elif  'Today' in date_str  :
             parsed_date = current_date
         # Обработка 'Tomorrow'
         elif date_str == 'Tomorrow':
@@ -232,7 +239,7 @@ def pin_all():
 
     del df_clean['date']
     df_clean.rename(columns={'date_2':'date'}, inplace=True) 
-    current_datetime9 = pd.Timestamp.now()
+    current_datetime9 = pd.Timestamp.now()+pd.Timedelta(hours=3)
     df_clean['Столбец11']=current_datetime9
     df_clean['Столбец11'] = df_clean['Столбец11'].dt.strftime('%d.%m.%Y %H:%M:%S')
 
@@ -248,6 +255,40 @@ def pin_all():
     df_reordered = df_clean.iloc[:, indices]
 
 
+
+
+    # Шаг 1. Объединяем дату и время в одну строку
+    df_reordered['datetime_str'] = df_reordered['date'] + ' ' + df_reordered['time']
+
+    # Шаг 2. Преобразуем в Timestamp
+    df_reordered['datetime'] = pd.to_datetime(df_reordered['datetime_str'], format='%d.%m.%Y %H:%M')
+
+    # Шаг 3. Прибавляем 3 часа
+    df_reordered['datetime_plus_3h'] = df_reordered['datetime'] + pd.Timedelta(hours=3)
+
+    # Шаг 4. Разделяем обратно на дату и время
+    df_reordered['new_date'] = df_reordered['datetime_plus_3h'].dt.strftime('%d.%m.%Y')
+    df_reordered['new_time'] = df_reordered['datetime_plus_3h'].dt.strftime('%H:%M')
+ 
+    # # Шаг 5. Формируем итоговый DataFrame с нужными колонками
+    # df_reordered2 = df_reordered[['new_date', 'new_time']].copy()
+    # df_reordered2.columns = ['date', 'time']  # переименовываем колонки
+    
+    
+    df_reordered = df_reordered.drop(['datetime_str', 'datetime', 'datetime_plus_3h','date', 'time'], axis=1)
+    df_reordered.rename(columns={'new_date': 'date'}, inplace=True) 
+    df_reordered.rename(columns={'new_time': 'time'}, inplace=True) 
+
+    # Получаем количество столбцов
+    n_cols = len(df_reordered.columns)
+
+
+    # Формируем список индексов: 10 и 11 (11-й и 12-й столбцы), затем все остальные
+    indices = [10,11] + [i for i in range(n_cols) if i not in [10,11]]
+
+
+    # Переставляем столбцы по индексам
+    df_reordered2 = df_reordered.iloc[:, indices]
 
     #######------------------------------------------------------------------------
 
@@ -275,7 +316,7 @@ def pin_all():
         'name','many']
     df2 = pd.DataFrame(data, columns=header)
     print(df,df2)
-    df_reordered2=df_reordered.replace(['', ' '], 0)
+    df_reordered3=df_reordered2.replace(['', ' '], 0)
     
     import gspread
     gc = gspread.service_account_from_dict(credentials)
@@ -287,8 +328,8 @@ def pin_all():
     new_header = df5.iloc[0]
     df5 = df5[1:]
     df5.rename(columns=new_header, inplace=True)
-    df7=pd.concat([df5,df_reordered2])
-
+    df7=pd.concat([df5,df_reordered3])
+ 
     wks2.update([df7.columns.values.tolist()]+df7.values.tolist())
 
 
