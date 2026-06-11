@@ -213,7 +213,7 @@ def pin_all():
             date_part = ','.join(date_str.split(',')[1:]).strip()
             parsed_date = datetime.strptime(date_part, '%b %d, %Y')
         # Обработка 'Today'
-        elif date_str == 'Today':
+        elif 'Today' in date_str :
             parsed_date = current_date
         # Обработка 'Tomorrow'
         elif date_str == 'Tomorrow':
