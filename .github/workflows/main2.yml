@@ -2,15 +2,15 @@ name: Daily_bot2
 
 
 on:
-    workflow_dispatch:
 
 
 
 
-  # schedule: 
-  #       # - cron: '55 8,14 * * *'
-  #       # - cron: '0 */4 * * *'
-  #       - cron: '15 1,5,9,13,17 * * *'
+
+  schedule: 
+        # - cron: '55 8,14 * * *'
+        # - cron: '0 */4 * * *'
+        - cron: '05 0,3,6,9,12,15,18,21 * * *'
 env:
     TOKEN1: ${{ secrets.TOKEN1 }}
     TOKEN2: ${{ secrets.TOKEN2 }}
