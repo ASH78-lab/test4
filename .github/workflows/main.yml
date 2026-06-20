@@ -7,7 +7,7 @@ on:
 
   push:
   schedule: 
-        - cron: '00 5 * * *'
+        - cron: '00 3 * * *'
 env:
     TOKEN1: ${{ secrets.TOKEN1 }}
     TOKEN2: ${{ secrets.TOKEN2 }}
